@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0f1115">
+<title>Narrarr</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+<script>
+  try { var t = localStorage.getItem('narrarr-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
+<div class="marco">
+  <nav class="lateral" aria-label="Navegación principal">
+    <a class="marca" href="#/biblioteca" aria-label="Narrarr, ir a la biblioteca">
+      <img src="icon.svg" alt="" width="32" height="32"><span>Narrarr</span>
+    </a>
+    <ul id="menu"></ul>
+    <button class="tema-btn" id="temaBtn" type="button" aria-label="Cambiar tema claro u oscuro"></button>
+  </nav>
+  <main id="principal" tabindex="-1"></main>
+</div>
+<div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+<div id="modal" class="modal-fondo" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

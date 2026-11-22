@@ -1,0 +1,30 @@
+# Ejemplo de despliegue. Las claves también se pueden poner en Ajustes (la base de datos manda).
+services:
+  narrarr:
+    image: nemesbak/narrarr:latest
+    container_name: narrarr
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PUID=99
+      - PGID=100
+      - TZ=Europe/Madrid
+      - PROWLARR_URL=http://192.168.1.25:9696
+      - PROWLARR_KEY=
+      - QBIT_URL=http://192.168.1.25:8081
+      - QBIT_USUARIO=
+      - QBIT_CLAVE=
+      - QBIT_CATEGORIA=audiolibros
+      - QBIT_RUTA_REMOTA=/datos/torrents/audiolibros
+      - TELEGRAM_TOKEN=
+      - TELEGRAM_CHAT=
+      - JELLYFIN_URL=
+      - JELLYFIN_KEY=
+      - EMBY_URL=
+      - EMBY_KEY=
+    volumes:
+      - ./config:/config
+      # Biblioteca y descargas en el mismo sistema de archivos para poder usar hardlinks
+      - /mnt/user/datos/audiolibros:/audiolibros
+      - /mnt/user/datos/torrents/audiolibros:/descargas

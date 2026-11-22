@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Narrarr</title>
+  <circle cx="256" cy="256" r="248" fill="#0f172a"/>
+  <!-- auriculares -->
+  <path d="M120 270 V230 a136 136 0 0 1 272 0 V270" fill="none" stroke="#14b8a6" stroke-width="28" stroke-linecap="round"/>
+  <rect x="92" y="250" width="64" height="104" rx="26" fill="#14b8a6"/>
+  <rect x="356" y="250" width="64" height="104" rx="26" fill="#14b8a6"/>
+  <!-- libro abierto -->
+  <path d="M256 318 C220 296 184 290 166 292 V402 C184 400 220 406 256 428 Z" fill="#5eead4"/>
+  <path d="M256 318 C292 296 328 290 346 292 V402 C328 400 292 406 256 428 Z" fill="#99f6e4"/>
+  <path d="M256 318 V428" stroke="#0f172a" stroke-width="6"/>
+</svg>

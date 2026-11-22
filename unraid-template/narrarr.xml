@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>narrarr</Name>
+  <Repository>nemesbak/narrarr:latest</Repository>
+  <Registry>https://hub.docker.com/r/nemesbak/narrarr</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/nemesbak/narrarr/issues</Support>
+  <Project>https://github.com/nemesbak/narrarr</Project>
+  <Overview>Narrarr es un gestor tipo *arr de audiolibros, todo en castellano. Busca los libros en Audible España (con narrador, serie y duración), los encuentra en tus indexadores de Prowlarr priorizando las versiones en castellano, los manda a qBittorrent y, al terminar, los importa a tu biblioteca con hardlink (sin romper el seedeo de trackers privados), con cover.jpg y metadata.json listos para Jellyfin, Emby y Audiobookshelf. Vigila autores, busca con freno anti-baneo y avisa por Telegram. Las conexiones opcionales se pueden configurar aquí o después en Ajustes, dentro de la WebUI.</Overview>
+  <Category>MediaApp:Books Downloaders:</Category>
+  <WebUI>http://[IP]:[PORT:8787]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/nemesbak/narrarr/main/unraid-template/narrarr.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/nemesbak/narrarr/main/icon.png</Icon>
+  <ExtraParams/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WebUI Port" Target="8787" Default="8787" Mode="tcp" Description="Puerto donde se abre el panel de Narrarr." Type="Port" Display="always" Required="true" Mask="false">8787</Config>
+  <Config Name="Configuración" Target="/config" Default="/mnt/user/appdata/narrarr" Mode="rw" Description="Base de datos, portadas en caché y log de Narrarr." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/narrarr</Config>
+  <Config Name="Biblioteca de audiolibros" Target="/audiolibros" Default="/mnt/user/datos/media/audiolibros" Mode="rw" Description="Carpeta donde quedan los audiolibros ordenados (Autor/Título (Narrador)/). La misma que leen Jellyfin, Emby o Audiobookshelf. Para que el hardlink funcione, debe estar en el mismo share que las descargas." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/datos/media/audiolibros</Config>
+  <Config Name="Descargas" Target="/descargas" Default="/mnt/user/datos/torrents/audiolibros" Mode="rw" Description="Carpeta donde qBittorrent deja los audiolibros terminados (categoría audiolibros). Si qBittorrent la ve con otra ruta, indícala en QBIT_RUTA_REMOTA." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/datos/torrents/audiolibros</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Usuario dueño de los archivos (99 = nobody en Unraid)." Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Grupo dueño de los archivos (100 = users en Unraid)." Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Madrid" Mode="" Description="Zona horaria para el planificador y el log." Type="Variable" Display="always" Required="false" Mask="false">Europe/Madrid</Config>
+  <Config Name="Prowlarr URL" Target="PROWLARR_URL" Default="" Mode="" Description="Opcional. P. ej. http://192.168.1.10:9696. También se puede poner en Ajustes." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Prowlarr API key" Target="PROWLARR_KEY" Default="" Mode="" Description="Opcional. En Prowlarr: Settings → General → API Key." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="qBittorrent URL" Target="QBIT_URL" Default="" Mode="" Description="Opcional. P. ej. http://192.168.1.10:8080." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="qBittorrent usuario" Target="QBIT_USUARIO" Default="" Mode="" Description="Opcional. Usuario de la WebUI de qBittorrent." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="qBittorrent contraseña" Target="QBIT_CLAVE" Default="" Mode="" Description="Opcional. Contraseña de la WebUI de qBittorrent." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="qBittorrent categoría" Target="QBIT_CATEGORIA" Default="audiolibros" Mode="" Description="Categoría que usará Narrarr en qBittorrent." Type="Variable" Display="advanced" Required="false" Mask="false">audiolibros</Config>
+  <Config Name="Ruta remota de descargas" Target="QBIT_RUTA_REMOTA" Default="" Mode="" Description="Opcional. Ruta de las descargas TAL COMO LA VE qBittorrent (p. ej. /datos/torrents/audiolibros). Narrarr la traduce a /descargas. Vacío = misma ruta." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Telegram token" Target="TELEGRAM_TOKEN" Default="" Mode="" Description="Opcional. Token del bot de Telegram para avisos." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Telegram chat" Target="TELEGRAM_CHAT" Default="" Mode="" Description="Opcional. ID del chat que recibe los avisos." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Jellyfin URL" Target="JELLYFIN_URL" Default="" Mode="" Description="Opcional. Para refrescar la biblioteca al importar." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Jellyfin API key" Target="JELLYFIN_KEY" Default="" Mode="" Description="Opcional. Panel de Jellyfin → Claves API." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Emby URL" Target="EMBY_URL" Default="" Mode="" Description="Opcional. Para refrescar la biblioteca al importar." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Emby API key" Target="EMBY_KEY" Default="" Mode="" Description="Opcional. Panel de Emby → Claves API." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+</Container>
