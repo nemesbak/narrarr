@@ -1,5 +1,9 @@
 # Cambios
 
+## 1.1.1 — 2026-11-22
+
+- Arreglo: en Emby los audiolibros de un solo archivo salían sin portada (Emby no usa el `cover.jpg` de la carpeta). Ahora Narrarr se la sube tras importar, sin tocar el audio.
+
 ## 1.1.0 — 2026-11-22
 
 - **Autor desde Audible**: en *Añadir* y en la ficha, el autor es un enlace a todo su catálogo en castellano, con «Añadir los que faltan» y «Vigilar novedades».

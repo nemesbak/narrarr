@@ -1,6 +1,9 @@
 """Avisos por Telegram y refresco de Jellyfin/Emby (todo opcional)."""
+import asyncio
+import base64
 import html
 import logging
+import os
 
 import httpx
 
@@ -8,6 +11,7 @@ from . import config
 
 log = logging.getLogger("narrarr.avisos")
 TIMEOUT = httpx.Timeout(15.0)
+_TAREAS: set = set()
 
 
 def _cabecera(clave: str) -> dict:
@@ -75,5 +79,35 @@ async def libro_importado(libro: dict) -> None:
         await telegram(texto)
         for s in ("jellyfin", "emby"):
             await refrescar(s)
+        if libro.get("ruta"):
+            t = asyncio.create_task(portada_emby(libro["ruta"]))
+            _TAREAS.add(t)
+            t.add_done_callback(_TAREAS.discard)
     except Exception as e:  # noqa: BLE001
         log.warning("Fallo en los avisos tras importar: %s", e)
+
+
+async def portada_emby(ruta: str, espera: int = 180) -> None:
+    """Emby no usa el cover.jpg de la carpeta en libros de un solo archivo: se la subimos.
+    No se incrusta en el audio porque suele ser un hardlink del torrent que sigue sembrando."""
+    url, clave = config.obtener("emby_url"), config.obtener("emby_key")
+    cover = os.path.join(ruta, "cover.jpg")
+    if not url or not clave or not os.path.exists(cover):
+        return
+    await asyncio.sleep(espera)          # que Emby termine de escanear
+    carpeta = os.path.basename(ruta.rstrip("/"))
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as cli:
+            r = await cli.get(f"{url}/Items", headers=_cabecera(clave), params={
+                "Recursive": "true", "IncludeItemTypes": "Audio", "Fields": "Path"})
+            for it in r.json().get("Items", []):
+                p = (it.get("Path") or "").replace("\\", "/")
+                if os.path.basename(os.path.dirname(p)) != carpeta or (it.get("ImageTags") or {}).get("Primary"):
+                    continue
+                with open(cover, "rb") as fh:
+                    datos = base64.b64encode(fh.read())
+                await cli.post(f"{url}/Items/{it['Id']}/Images/Primary", content=datos,
+                               headers={**_cabecera(clave), "Content-Type": "image/jpeg"})
+                log.info("Portada subida a Emby: %s", it.get("Name"))
+    except Exception as e:  # noqa: BLE001
+        log.warning("No se pudo subir la portada a Emby: %s", e)
