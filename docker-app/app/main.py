@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import config, db, downloader, indexers, library, metadata, notify, scheduler
+from . import config, db, downloader, indexers, library, metadata, notify, scheduler, scoring
 
 # ---------------- registro ----------------
 os.makedirs(config.RUTA_CONFIG, exist_ok=True)
@@ -249,6 +249,27 @@ async def buscar_metadatos(q: str):
         m["en_biblioteca"] = _en_biblioteca(m)
         m.pop("autores_asin", None)
     return res
+
+
+@app.get("/api/metadatos/autor")
+async def metadatos_autor(nombre: str):
+    """Todo lo que hay de un autor en Audible (para «pinchar en el autor» desde Añadir)."""
+    if not nombre.strip():
+        error(400, "Falta el nombre del autor")
+    nombre = nombre.strip()
+    propios = {l["asin"]: l for l in db.consultar("SELECT id, asin, estado FROM libros WHERE asin IS NOT NULL")}
+    libros = []
+    for m in await metadata.buscar_autor(nombre):
+        if scoring.normalizar(nombre) not in scoring.normalizar(" ".join(m["autores"])):
+            continue
+        m.pop("autores_asin", None)
+        l = propios.get(m["asin"])
+        m["en_biblioteca"] = bool(l) or _en_biblioteca(m)
+        m["libro_id"] = l["id"] if l else None
+        m["estado"] = l["estado"] if l else None
+        libros.append(m)
+    a = db.uno("SELECT * FROM autores WHERE nombre = ?", (nombre,))
+    return {"nombre": nombre, "autor_id": a["id"] if a else None, "vigilado": bool(a and a.get("vigilado")), "libros": libros}
 
 
 # ---------------- autores ----------------

@@ -28,7 +28,8 @@ def biblioteca() -> str:
 
 def carpeta_destino(libro: dict) -> str:
     autor = sanear((libro.get("autor") or "").split(",")[0], "Autor desconocido")
-    titulo = sanear(libro.get("titulo"), "Sin título")
+    # «El Señor de los Anillos nº 01/03 La Comunidad…» → «El Señor de los Anillos La Comunidad…»
+    titulo = sanear(scoring.titulo_limpio(libro.get("titulo")) or libro.get("titulo"), "Sin título")
     narrador = (libro.get("narrador") or "").split(",")[0].strip()
     nombre = f"{titulo} ({sanear(narrador)})" if narrador else titulo
     return os.path.join(biblioteca(), autor, nombre)

@@ -128,7 +128,14 @@ class QBit:
                                   files={"torrents": ("narrarr.torrent", torrent, "application/x-bittorrent")})
         else:
             r = await self._pedir("POST", "/api/v2/torrents/add", data={**data, "urls": magnet})
-        if "fail" in r.text.lower():
+        # qBittorrent 4.x responde «Ok.»/«Fails.»; la 5.x, JSON {success_count, failure_count, ...}
+        txt = r.text.strip()
+        try:
+            j = r.json()
+            ok = isinstance(j, dict) and (j.get("success_count", 0) > 0 or j.get("failure_count", 1) == 0)
+        except ValueError:
+            ok = txt.lower() != "fails."
+        if not ok:
             raise ErrorDescarga("qBittorrent no aceptó el torrent (¿ya existe o es inválido?)")
 
 
@@ -166,6 +173,14 @@ async def capturar(url_descarga: str) -> str:
     torrent, magnet = await obtener_torrent(url_descarga)
     h = infohash(torrent) if torrent else hash_de_magnet(magnet or "")
     async with QBit() as q:
+        # Si ya está en qBittorrent (añadido antes o por otra app) se adopta: no hace falta volver a añadirlo
+        if h and await q.torrents(h):
+            log.info("El torrent %s ya estaba en qBittorrent: se adopta", h)
+            try:
+                await q._pedir("POST", "/api/v2/torrents/addTags", data={"hashes": h, "tags": ETIQUETA})
+            except Exception:  # noqa: BLE001
+                pass
+            return h.lower()
         await q.anadir(torrent=torrent, magnet=magnet)
         if not h:
             # Último recurso: el torrent más reciente con nuestra etiqueta

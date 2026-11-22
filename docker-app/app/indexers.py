@@ -1,5 +1,6 @@
 """Búsqueda de lanzamientos: Prowlarr (API v1) y Torznab genérico."""
 import logging
+import re
 import xml.etree.ElementTree as ET
 
 import httpx
@@ -86,9 +87,16 @@ def puntuar_lista(releases: list[dict], titulo: str, autor: str) -> list[dict]:
 
 async def buscar_libro(libro: dict) -> list[dict]:
     """Busca «título autor» y, si no sale nada, solo el título."""
-    titulo = libro.get("titulo") or ""
+    titulo = scoring.titulo_limpio(libro.get("titulo")) or (libro.get("titulo") or "")
     autor = (libro.get("autor") or "").split(",")[0].strip()
-    releases = await buscar_prowlarr(f"{titulo} {autor}".strip())
-    if not releases and autor:
-        releases = await buscar_prowlarr(titulo)
+    # De más concreta a más amplia; «El Señor de los Anillos nº 02/03 Las Dos Torres» → también «Las Dos Torres»
+    consultas = [f"{titulo} {autor}".strip(), titulo]
+    m = re.search(r"(?i)n[ºo°]\.?\s*\d+\s*/\s*\d+\s+(.+)$", libro.get("titulo") or "")
+    if m:
+        consultas.append(m.group(1))
+    releases = []
+    for c in dict.fromkeys(consultas):
+        releases = await buscar_prowlarr(c)
+        if releases:
+            break
     return puntuar_lista(releases, titulo, libro.get("autor") or "")

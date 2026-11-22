@@ -216,7 +216,7 @@ async function navegar() {
   const { partes, params } = ruta();
   let nombre = partes[0] || 'biblioteca';
   if (nombre === 'anadir') nombre = 'añadir';
-  const seccion = { libro: 'biblioteca', autor: 'autores' }[nombre] || nombre;
+  const seccion = { libro: 'biblioteca', autor: 'autores', 'autor-audible': 'añadir' }[nombre] || nombre;
   $$('#menu a').forEach((a) => (a.dataset.ruta === seccion ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   const main = $('#principal');
   const fn = vistas[nombre] || vistas.biblioteca;
@@ -331,7 +331,7 @@ vistas.libro = async (el, [id]) => {
       ${insignia(l.estado, l.progreso)}
       <h1>${esc(l.titulo)}</h1>
       ${l.subtitulo ? `<div class="subt">${esc(l.subtitulo)}</div>` : ''}
-      <div>de <a id="autorLink" href="#/autores">${esc(l.autor || 'Autor desconocido')}</a>${l.narrador ? ` · narrado por <b>${esc(l.narrador)}</b>` : ''}</div>
+      <div>de <a id="autorLink" href="#/autor-audible?nombre=${encodeURIComponent((l.autor || '').split(',')[0].trim())}">${esc(l.autor || 'Autor desconocido')}</a>${l.narrador ? ` · narrado por <b>${esc(l.narrador)}</b>` : ''}</div>
       <div class="datos">
         ${l.serie ? `<span>${ico('biblioteca')} <b>${serieTxt(l.serie, l.serie_pos)}</b></span>` : ''}
         ${l.duracion_min ? `<span>${ico('reloj')} <b>${duracion(l.duracion_min)}</b></span>` : ''}
@@ -340,6 +340,7 @@ vistas.libro = async (el, [id]) => {
         ${l.tamano ? `<span>${ico('carpeta')} <b>${tamano(l.tamano)}</b></span>` : ''}
         ${l.ultima_busqueda ? `<span>Última búsqueda <b title="${esc(fechaTitulo(l.ultima_busqueda))}">${relativa(l.ultima_busqueda)}</b></span>` : ''}
       </div>
+      <div id="seguimiento"></div>
       ${l.sinopsis ? `<div class="sinopsis plegada" id="sinopsis">${esc(l.sinopsis)}</div><button class="enlace-btn" id="masSinopsis" aria-expanded="false" aria-controls="sinopsis">Leer más</button>` : ''}
       <div class="acciones">
         <button class="btn prim" id="bAuto">${ico('buscar')} Buscar automáticamente</button>
@@ -353,6 +354,29 @@ vistas.libro = async (el, [id]) => {
       <button role="tab" aria-selected="false" data-p="historial" id="tabHist">Historial</button>
     </div><div id="panelP" role="tabpanel"></div>`;
   autorEnlace();
+  // Seguimiento en vivo: Añadido → Buscado → Descargando → Importado (se refresca cada 5 s hasta terminar)
+  const seguimiento = (x) => {
+    const zona = $('#seguimiento', el);
+    if (!zona) return;
+    if (x.estado === 'descargado' && !(x.descargas || []).some((d) => d.estado !== 'importada')) { zona.innerHTML = ''; return; }
+    const d = (x.descargas || [])[0];
+    const pct = d ? Math.round(d.progreso || 0) : 0;   // el backend guarda 0..100
+    const paso = (hecho, activo, titulo, detalle) => `<li class="paso ${hecho ? 'hecho' : ''} ${activo ? 'activo' : ''}"><span class="punto"></span><div><b>${titulo}</b>${detalle ? `<div class="texto3 peq">${detalle}</div>` : ''}</div></li>`;
+    const buscado = !!x.ultima_busqueda, capturado = !!d, completo = d && ['completada', 'importada'].includes(d.estado), importado = x.estado === 'descargado';
+    zona.innerHTML = `<ol class="seguimiento">
+      ${paso(true, false, 'Añadido', x['añadido'] ? relativa(x['añadido']) : '')}
+      ${paso(buscado, !buscado, 'Buscado', buscado ? `hace ${relativa(x.ultima_busqueda).replace(/^hace /, '')}${capturado ? '' : ' · sin lanzamiento válido todavía; se reintenta solo'}` : 'esperando turno del planificador')}
+      ${paso(capturado, capturado && !completo, 'Descargando', capturado ? `${esc(d.titulo_release || '')}<div class="barra-prog"><span style="width:${completo ? 100 : pct}%"></span></div>${completo ? '100 %' : pct + ' %'}${d.error ? ` · <span class="motivo-rech">${esc(d.error)}</span>` : ''}` : '')}
+      ${paso(importado, completo && !importado, 'Importado', importado ? 'en tu biblioteca' : (completo ? 'importando…' : ''))}
+    </ol>`;
+  };
+  seguimiento(l);
+  if (!['descargado', 'ignorado'].includes(l.estado)) {
+    const t = setInterval(async () => {
+      try { const x = await api(`/libros/${l.id}`); seguimiento(x); if (x.estado !== l.estado) { clearInterval(t); navegar(); } } catch { /* nada */ }
+    }, 5000);
+    limpiar.push(() => clearInterval(t));
+  }
   const sin = $('#masSinopsis', el);
   if (sin) {
     const s = $('#sinopsis', el);
@@ -466,7 +490,7 @@ function tarjetaResultado(r, i) {
   const narr = (r.narradores || []).join(', ');
   return `<article class="res"><div class="portada">${r.portada ? imgPortada(r.portada, 'Portada de ' + r.titulo) : `<div class="avatar" style="width:100%;height:100%;border-radius:0">${esc(iniciales(r.titulo))}</div>`}</div>
     <div class="res-info"><h3>${esc(r.titulo)}</h3>${r.subtitulo ? `<div class="meta">${esc(r.subtitulo)}</div>` : ''}
-      <div class="meta">de <b style="color:var(--texto2)">${esc(autores || 'Autor desconocido')}</b></div>
+      <div class="meta">de ${(r.autores || []).length ? r.autores.map((a) => `<a class="enlace-autor" href="#/autor-audible?nombre=${encodeURIComponent(a)}" title="Ver todo lo de ${esc(a)}">${esc(a)}</a>`).join(', ') : '<b style="color:var(--texto2)">Autor desconocido</b>'}</div>
       ${narr ? `<div class="meta">Narrado por ${esc(narr)}</div>` : ''}
       <div class="chips">${r.duracion_min ? `<span class="chip">${duracion(r.duracion_min)}</span>` : ''}${r.serie ? `<span class="chip">${serieTxt(r.serie, r.serie_pos)}</span>` : ''}${r.anio ? `<span class="chip">${esc(r.anio)}</span>` : ''}</div>
       <div class="acciones">${r.en_biblioteca ? `<span class="ya-tienes">${ico('ok')} Ya lo tienes</span>`
@@ -480,9 +504,9 @@ function enlazarAnadir(cont, lista) {
     const zona = b.parentElement;
     $$('button', zona).forEach((x) => (x.disabled = true));
     try {
-      await api('/libros', { method: 'POST', body: { asin: r.asin, buscar_ya: buscar } });
+      const n = await api('/libros', { method: 'POST', body: { asin: r.asin, buscar_ya: buscar } });
       r.en_biblioteca = true;
-      zona.innerHTML = `<span class="ya-tienes">${ico('ok')} Ya lo tienes</span>`;
+      zona.innerHTML = `<span class="ya-tienes">${ico('ok')} ${buscar ? 'Añadido · buscando' : 'Añadido a deseados'}</span>${n && n.id ? ` <a class="btn peq" href="#/libro/${n.id}">Ver progreso →</a>` : ''}`;
       toast(buscar ? `«${r.titulo}» añadido; ya lo estoy buscando` : `«${r.titulo}» añadido a deseados`);
     } catch (e) { fallo(e); $$('button', zona).forEach((x) => (x.disabled = false)); }
   }));
@@ -535,8 +559,49 @@ vistas['añadir'] = async (el, _p, params) => {
   };
 };
 
+/* ---------- Autor desde Audible (al pinchar un autor en Añadir) ---------- */
+vistas['autor-audible'] = async (el, _p, params) => {
+  const nombre = params.get('nombre') || '';
+  el.innerHTML = `<div class="cabecera"><h1>${esc(nombre)}</h1></div>${skLineas(4)}`;
+  let d;
+  try { d = await api('/metadatos/autor?nombre=' + encodeURIComponent(nombre)); } catch (e) { el.innerHTML = vacio('fallo', 'No he podido leer este autor', esc(e.message)); return; }
+  const libros = d.libros || [];
+  const faltan = () => libros.filter((x) => !x.en_biblioteca);
+  const pintar = () => {
+    el.innerHTML = `<div class="cabecera">${avatar({ nombre })}<div><h1>${esc(nombre)}</h1>
+        <div class="texto3 peq">${nf.format(libros.length)} audiolibros en castellano en Audible · ${nf.format(libros.length - faltan().length)} en tu biblioteca</div></div>
+        <span class="espacio"></span>
+        <label class="casilla" title="Añade solo sus libros nuevos como deseados"><input type="checkbox" id="aaVig" ${d.vigilado ? 'checked' : ''}> Vigilar novedades</label>
+        <button class="btn prim" id="aaTodos" ${faltan().length ? '' : 'disabled'}>${ico('anadir')} Añadir los ${nf.format(faltan().length)} que faltan</button></div>
+      ${libros.length ? `<div class="resultados">${libros.map(tarjetaResultado).join('')}</div>` : vacio('autores', 'Sin libros', 'Audible no tiene audiolibros en castellano de este autor.')}`;
+    enlazarAnadir(el, libros);
+    $('#aaVig', el).onchange = async (e) => {
+      try {
+        let id = d.autor_id;
+        if (!id) { const a = await api('/autores', { method: 'POST', body: { nombre } }); id = d.autor_id = a && a.id; }
+        await api(`/autores/${id}`, { method: 'PATCH', body: { vigilado: e.target.checked } });
+        d.vigilado = e.target.checked;
+        toast(e.target.checked ? `Vigilando a ${nombre}: sus novedades se añadirán solas` : `Ya no vigilas a ${nombre}`);
+      } catch (err) { fallo(err); e.target.checked = !e.target.checked; }
+    };
+    $('#aaTodos', el).onclick = async (e) => {
+      const lista = faltan();
+      const ok = await confirmar({ titulo: 'Añadir todos', texto: `Se añadirán <b>${lista.length}</b> libros de ${esc(nombre)} como <b>deseados</b>. Se irán buscando poco a poco (como mucho 5 cada 6 horas) para no saturar el tracker.`, boton: 'Añadir todos', peligro: false });
+      if (!ok) return;
+      e.currentTarget.disabled = true;
+      let n = 0;
+      for (const x of lista) {
+        try { await api('/libros', { method: 'POST', body: { asin: x.asin, buscar_ya: false } }); x.en_biblioteca = true; n++; } catch { /* ya estaba u otro fallo: seguimos */ }
+      }
+      toast(`${n} libros de ${nombre} añadidos a deseados`);
+      pintar();
+    };
+  };
+  pintar();
+};
+
 /* ---------- Autores ---------- */
-const avatar = (a, grande = false) => `<div class="avatar${grande ? ' grande' : ''}" aria-hidden="true">${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${a.foto_url ? '' : esc(iniciales(a.nombre))}</div>`;
+const avatar =(a, grande = false) => `<div class="avatar${grande ? ' grande' : ''}" aria-hidden="true">${a.foto_url ? `<img src="${esc(a.foto_url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}${a.foto_url ? '' : esc(iniciales(a.nombre))}</div>`;
 vistas.autores = async (el) => {
   el.innerHTML = `<div class="cabecera"><h1>Autores</h1><span class="sub" id="contA"></span><span class="espacio"></span><button class="btn prim" id="nuevoA">${ico('anadir')} Añadir autor</button></div>
     <div class="barra"><div class="buscar">${ico('buscar')}<input type="search" id="fa" placeholder="Filtrar autores…" aria-label="Filtrar autores"></div></div>

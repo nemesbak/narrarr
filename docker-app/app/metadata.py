@@ -24,6 +24,13 @@ def limpiar_html(texto: str | None) -> str:
     return re.sub(r"\n{3,}", "\n\n", texto).strip()
 
 
+def _autores_reales(lista: list[dict]) -> list[str]:
+    """Audible mete a traductores e ilustradores en authors: «Luis Domènech - translator», o sin ASIN."""
+    lista = [a for a in lista if a.get("name") and not re.search(r"(?i)[-–(]\s*(translator|traductor|traducci|illustrator|ilustrador)", a["name"])]
+    con_asin = [a for a in lista if a.get("asin")]
+    return [a["name"].strip() for a in (con_asin or lista)]
+
+
 def _normalizar(p: dict) -> dict:
     series = p.get("series") or []
     imgs = p.get("product_images") or {}
@@ -32,7 +39,7 @@ def _normalizar(p: dict) -> dict:
         "asin": p.get("asin"),
         "titulo": p.get("title") or "",
         "subtitulo": p.get("subtitle") or "",
-        "autores": [a.get("name") for a in (p.get("authors") or []) if a.get("name")],
+        "autores": _autores_reales(p.get("authors") or []),
         "autores_asin": [a.get("asin") for a in (p.get("authors") or [])],
         "narradores": [n.get("name") for n in (p.get("narrators") or []) if n.get("name")],
         "serie": series[0].get("title") if series else "",

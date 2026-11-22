@@ -3,7 +3,7 @@ import os
 
 from . import db
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 RUTA_CONFIG = db.RUTA_CONFIG
 RUTA_BIBLIOTECA = os.environ.get("NARRARR_BIBLIOTECA", "/audiolibros")

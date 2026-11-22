@@ -24,6 +24,15 @@ def normalizar(texto: str | None) -> str:
     return re.sub(r"\s+", " ", t).strip()
 
 
+def titulo_limpio(t: str | None) -> str:
+    """Quita lo que estorba al buscar: «(Canción de hielo y fuego)», «nº 02/03», «[Edición íntegra]», «Libro 2»."""
+    t = t or ""
+    t = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", t)
+    t = re.sub(r"(?i)\bn[ºo°]\.?\s*\d+\s*/\s*\d+", " ", t)
+    t = re.sub(r"(?i)\b(libro|volumen|vol\.?|tomo)\s+\d+\b", " ", t)
+    return re.sub(r"\s+", " ", t).strip(" -:,.")
+
+
 def _coincidencia(buscado: str, titulo_release: str) -> float:
     """Fracción (0..1) de palabras significativas de `buscado` presentes en el release."""
     palabras = [p for p in normalizar(buscado).split() if len(p) > 2 or p.isdigit()]
@@ -101,8 +110,8 @@ def puntuar(release: dict, titulo: str, autor: str = "", ajustes: dict | None = 
         motivos.append("−50 versión abreviada")
 
     # Coincidencia de título y autor
-    c_titulo = _coincidencia(titulo, nombre)
-    if c_titulo <= 0:
+    c_titulo = _coincidencia(titulo_limpio(titulo) or titulo, nombre)
+    if c_titulo < 0.6:   # «Fuego y sangre» no puede casar con «Juego de Tronos» por compartir «fuego»
         rechazado = True
         motivos.append("Rechazado: el título no coincide")
     else:
